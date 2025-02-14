@@ -1,0 +1,90 @@
+html, body {
+    padding: 0;
+    margin: 0;
+}
+
+.chat-container {
+    height: calc(100vh - 4.5rem);
+    overflow-x: hidden;
+    overflow-y: scroll;
+    padding-bottom: 0.5rem;
+}
+
+.write-msg-container {
+    display: block;
+}
+
+.msg-container {
+    display: flex;
+    flex-direction: row;
+}
+
+.my-msg-container {
+    display: flex;
+    justify-content: end;
+    flex-direction: row;
+}
+
+.msg-balloon {
+    border-radius: 0.5rem;
+    display: inline-block;
+    padding: 0.5rem 0.5rem;
+    margin-top: 0.5rem;
+    background-color: white;
+}
+
+.msg-balloon--me {
+    background-color: #578FCA;
+}
+
+.msg-balloon--other {
+    background-color: #A1E3F9;
+}
+
+.chat {
+    height: 100vh;
+    width: 1024px;
+    margin: 0 auto;
+    padding: 0;
+    position: relative;
+}
+
+.write-msg-container__message {
+    flex-grow: 10;
+}
+
+.write-msg-container__send-btn {
+    flex-grow: 1;
+}
+
+.write-msg-container {
+    height: 3.5rem;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0;
+    right: 0;
+    padding: 0 0.5rem;
+    align-items: center;
+    align-content: center;
+    gap: 0.5rem;
+}
+
+.input {
+    padding: 1rem 2rem;
+    margin: 0;
+}
+
+.button {
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
+    border: 0;
+}
+
+.button--primary {
+    background-color: #3674B5;
+    color: white;
+    font-weight: bold;
+}

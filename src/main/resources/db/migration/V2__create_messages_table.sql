@@ -1,0 +1,5 @@
+CREATE TABLE messages (
+    id INTEGER PRIMARY KEY NOT NULL,
+    body TEXT NOT NULL,
+    sender VARCHAR(32) NOT NULL
+);
