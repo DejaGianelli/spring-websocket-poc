@@ -1,44 +1,44 @@
-package com.example.demo;
+package com.example.demo.rest;
 
+import com.example.demo.domain.ChatMessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Controller
-public class ChatController {
+@RestController
+@RequestMapping("/v1/chat")
+public class ChatRestController {
 
     final ChatMessageRepository chatMessageRepository;
 
     @Autowired
-    public ChatController(ChatMessageRepository chatMessageRepository) {
+    public ChatRestController(ChatMessageRepository chatMessageRepository) {
         this.chatMessageRepository = chatMessageRepository;
     }
 
-    @GetMapping("/chat")
-    public String home(Model model, Principal principal) {
+    @GetMapping
+    public ResponseEntity<List<ChatResponse>> chat(Principal principal) {
 
         final String loggedUsername = principal.getName();
 
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
-        List<ChatMessageViewModel> messages = chatMessageRepository
+        List<ChatResponse> messages = chatMessageRepository
                 .findAll(PageRequest.of(0, 20, sort))
                 .stream()
-                .map(m -> new ChatMessageViewModel(loggedUsername.equals(m.getSender()), m.getBody()))
+                .map(m -> new ChatResponse(loggedUsername.equals(m.getSender()), m.getBody()))
                 .collect(Collectors.toList());
 
         Collections.reverse(messages);
 
-        model.addAttribute("user", loggedUsername);
-        model.addAttribute("messages", messages);
-
-        return "chat";
+        return ResponseEntity.ok(messages);
     }
 }

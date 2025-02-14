@@ -11,10 +11,10 @@
 <div class="app">
     <div class="chat">
         <div class="chat-container">
-            <div th:each="message : ${messages}" th:class="${message.me} ? 'my-msg-container' : 'msg-container'">
-                <span th:class="${message.me} ? 'msg-balloon msg-balloon--me' : 'msg-balloon msg-balloon--other'"
-                      th:text="${message.getBody()}"></span>
-            </div>
+<!--            <div th:each="message : ${messages}" th:class="${message.me} ? 'my-msg-container' : 'msg-container'">-->
+<!--                <span th:class="${message.me} ? 'msg-balloon msg-balloon&#45;&#45;me' : 'msg-balloon msg-balloon&#45;&#45;other'"-->
+<!--                      th:text="${message.body()}"></span>-->
+<!--            </div>-->
         </div>
 
         <div class="write-msg-container">
@@ -25,11 +25,28 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@5.0.0/bundles/stomp.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script th:inline="javascript">
 
-    function ChatMessage(body = "", sender = "") {
+    function User(username) {
+        this.username = username
+    }
+
+    function Message(body, me) {
         this.body = body
-        this.sender = sender
+        this.me = me
+    }
+
+    function Chat(messages = []) {
+        this.messages = messages
+
+        this.addMessage = function(message) {
+            this.messages.push(message)
+        }
+    }
+
+    function MessageRequest(body = "") {
+        this.body = body
     }
 
     const sendBtn = document.querySelector(".write-msg-container__send-btn")
@@ -50,9 +67,21 @@
     const observer = new MutationObserver(callback);
     observer.observe(messagesContainer, config);
 
-    const user = {
-        username:  /*[[${user}]]*/""
-    }
+    const chat = new Chat([])
+    const user = new User(/*[[${user}]]*/"")
+
+    console.log(`Logged user: ${user.username}`)
+
+    axios.get('/v1/chat')
+        .then(function(response) {
+            console.log(response);
+            response.data.forEach(item => {
+                const message = new Message(item.body, item.me)
+                chat.addMessage(message)
+                let elem = createMessageDomNode(message)
+                showMessage(elem)
+            });
+        });
 
     const client = new StompJs.Client({
         brokerURL: 'ws://localhost:8080/ws',
@@ -72,43 +101,57 @@
     function handleChatSubscription(message) {
         if (message.body) {
             const messageJson = JSON.parse(message.body)
-            const chatMessageData = new ChatMessage(messageJson.body, messageJson.sender)
-            if (chatMessageData.sender == user.username) {
-                showMessageBallon(chatMessageData, 'me')
+            let me = false
+            if (messageJson.sender == user.username) {
+                me = true
+            }
+            const chatMessage = new Message(messageJson.body, me)
+            chat.addMessage(chatMessage);
+            let elem = createMessageDomNode(chatMessage)
+            showMessage(elem)
+            console.log(chatMessage)
+            if (chatMessage.me) {
                 sendMessageInput.value = "";
                 sendMessageInput.focus();
-            } else {
-                showMessageBallon(chatMessageData, 'other')
             }
         }
     }
 
     function handleSendMessage(event) {
-        const chatMessageData = new ChatMessage(sendMessageInput.value, user.username)
-        const body = JSON.stringify(chatMessageData);
+        const request = new MessageRequest(sendMessageInput.value)
+        const body = JSON.stringify(request);
         client.publish({
             destination: '/app/chat',
             body: body
         })
     }
 
-    function showMessageBallon(message, sender = "me") {
+    function createMessageDomNode(message) {
+        let me = false;
+        if (message.me) {
+            me = true;
+        }
         const rowDiv = document.createElement('div');
-        if (sender == "me") {
+        if (me) {
             rowDiv.classList.add('my-msg-container');
         } else {
             rowDiv.classList.add('msg-container');
         }
         const span = document.createElement('span');
-        if (sender == "me") {
+        if (me) {
             span.classList.add('msg-balloon', 'msg-balloon--me');
         } else {
             span.classList.add('msg-balloon', 'msg-balloon--other');
         }
         span.textContent = message.body;
         rowDiv.appendChild(span);
-        messagesContainer.appendChild(rowDiv)
+        return rowDiv;
     }
+
+    function showMessage(elem) {
+        messagesContainer.appendChild(elem)
+    }
+
 </script>
 </body>
 </html>

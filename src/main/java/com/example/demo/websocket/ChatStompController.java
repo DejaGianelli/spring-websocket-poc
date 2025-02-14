@@ -1,5 +1,7 @@
-package com.example.demo;
+package com.example.demo.websocket;
 
+import com.example.demo.domain.ChatMessage;
+import com.example.demo.domain.ChatMessageRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -39,16 +41,16 @@ public class ChatStompController {
         ChatMessageData chatMessageData = objectMapper.readValue(messageString, ChatMessageData.class);
 
         logger.info("Received message from: {}. Session id: {}. Message: {}",
-                chatMessageData.sender(), sessionId, chatMessageData.body());
+                userName, sessionId, chatMessageData.body());
 
         //TODO: add FK to user table instead of sender name
-        chatMessageRepository.save(new ChatMessage(chatMessageData.body, chatMessageData.sender));
+        chatMessageRepository.save(new ChatMessage(chatMessageData.body, userName));
 
-        chatMessageData = new ChatMessageData(userName, chatMessageData.body());
+        chatMessageData = new ChatMessageData(chatMessageData.body(), userName);
 
         return objectMapper.writeValueAsString(chatMessageData);
     }
 
-    public record ChatMessageData(String sender, String body) {
+    public record ChatMessageData(String body, String sender) {
     }
 }
