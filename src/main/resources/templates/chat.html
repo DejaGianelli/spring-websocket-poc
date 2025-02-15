@@ -11,12 +11,7 @@
 <div class="app">
     <div class="chat">
         <div class="chat-container">
-<!--            <div th:each="message : ${messages}" th:class="${message.me} ? 'my-msg-container' : 'msg-container'">-->
-<!--                <span th:class="${message.me} ? 'msg-balloon msg-balloon&#45;&#45;me' : 'msg-balloon msg-balloon&#45;&#45;other'"-->
-<!--                      th:text="${message.body()}"></span>-->
-<!--            </div>-->
         </div>
-
         <div class="write-msg-container">
             <input placeholder="write a message..." class="input write-msg-container__message" type="text"/>
             <button class="button button--primary write-msg-container__send-btn">Send</button>
@@ -26,7 +21,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@5.0.0/bundles/stomp.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script th:inline="javascript">
+
+<script th:inline="javascript" type="module">
 
     function User(username) {
         this.username = username
@@ -53,40 +49,57 @@
     const sendMessageInput = document.querySelector(".write-msg-container__message")
     const messagesContainer = document.querySelector(".chat-container")
 
-    messagesContainer.scrollTo(0, messagesContainer.scrollHeight);
-
-    const callback = function (mutationsList, observer) {
-        for (let mutation of mutationsList) {
-            if (mutation.type === "childList") {
-                messagesContainer.scrollTo(0, messagesContainer.scrollHeight);
-            }
-        }
-    };
-
-    const config = { childList: true };
-    const observer = new MutationObserver(callback);
-    observer.observe(messagesContainer, config);
-
+    let lrid;
     const chat = new Chat([])
     const user = new User(/*[[${user}]]*/"")
 
     console.log(`Logged user: ${user.username}`)
 
-    axios.get('/v1/chat')
-        .then(function(response) {
-            console.log(response);
-            response.data.forEach(item => {
-                const message = new Message(item.body, item.me)
-                chat.addMessage(message)
-                let elem = createMessageDomNode(message)
-                showMessage(elem)
-            });
+    messagesContainer.scrollTo(0, messagesContainer.scrollHeight);
+
+    messagesContainer.addEventListener("scroll", handleScrollTop);
+
+    async function handleScrollTop(event) {
+        if (messagesContainer.scrollTop == 0) {
+            const messages = await fetchMessages()
+            for (let i = messages.length - 1; i >= 0; i--) {
+                let elem = createMessageDomNode(messages[i])
+                messagesContainer.prepend(elem)
+            }
+        }
+    }
+
+    const messages = await fetchMessages()
+    messages.forEach(m => {
+        let elem = createMessageDomNode(m)
+        messagesContainer.appendChild(elem)
+    })
+
+    async function fetchMessages() {
+        const url = new URL(`${location.protocol}//${window.location.host}/v1/chat`);
+        if (lrid) {
+            url.searchParams.set("lrid", lrid)
+        }
+        const m = []
+        const response = await axios.get(url.toString())
+        if (response.data.length == 0) {
+            return m
+        }
+        lrid = response.headers.get("lrid")
+        response.data.forEach(item => {
+            const message = new Message(item.body, item.me)
+            chat.addMessage(message)
+            m.push(message)
         });
+        return m
+    }
+
+    messagesContainer.scrollTo(0, messagesContainer.scrollHeight)
 
     const client = new StompJs.Client({
         brokerURL: 'ws://localhost:8080/ws',
         // debug: function (str) {
-        //     console.log(str);
+        //     console.log(str)
         // }
     });
 
@@ -106,14 +119,14 @@
                 me = true
             }
             const chatMessage = new Message(messageJson.body, me)
-            chat.addMessage(chatMessage);
+            chat.addMessage(chatMessage)
             let elem = createMessageDomNode(chatMessage)
-            showMessage(elem)
-            console.log(chatMessage)
+            messagesContainer.appendChild(elem)
             if (chatMessage.me) {
-                sendMessageInput.value = "";
-                sendMessageInput.focus();
+                sendMessageInput.value = ""
+                sendMessageInput.focus()
             }
+            messagesContainer.scrollTo(0, messagesContainer.scrollHeight)
         }
     }
 
@@ -127,29 +140,25 @@
     }
 
     function createMessageDomNode(message) {
-        let me = false;
+        let me = false
         if (message.me) {
-            me = true;
+            me = true
         }
-        const rowDiv = document.createElement('div');
+        const rowDiv = document.createElement('div')
         if (me) {
-            rowDiv.classList.add('my-msg-container');
+            rowDiv.classList.add('my-msg-container')
         } else {
-            rowDiv.classList.add('msg-container');
+            rowDiv.classList.add('msg-container')
         }
-        const span = document.createElement('span');
+        const span = document.createElement('span')
         if (me) {
-            span.classList.add('msg-balloon', 'msg-balloon--me');
+            span.classList.add('msg-balloon', 'msg-balloon--me')
         } else {
-            span.classList.add('msg-balloon', 'msg-balloon--other');
+            span.classList.add('msg-balloon', 'msg-balloon--other')
         }
-        span.textContent = message.body;
-        rowDiv.appendChild(span);
-        return rowDiv;
-    }
-
-    function showMessage(elem) {
-        messagesContainer.appendChild(elem)
+        span.textContent = message.body
+        rowDiv.appendChild(span)
+        return rowDiv
     }
 
 </script>

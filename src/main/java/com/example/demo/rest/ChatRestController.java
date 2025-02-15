@@ -1,16 +1,17 @@
 package com.example.demo.rest;
 
-import com.example.demo.domain.ChatMessageRepository;
+import com.example.demo.domain.ChatMessage;
+import com.example.demo.domain.GetMessageChunkService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,27 +19,34 @@ import java.util.stream.Collectors;
 @RequestMapping("/v1/chat")
 public class ChatRestController {
 
-    final ChatMessageRepository chatMessageRepository;
+    final GetMessageChunkService getMessageChunkService;
 
     @Autowired
-    public ChatRestController(ChatMessageRepository chatMessageRepository) {
-        this.chatMessageRepository = chatMessageRepository;
+    public ChatRestController(GetMessageChunkService getMessageChunkService) {
+        this.getMessageChunkService = getMessageChunkService;
     }
 
     @GetMapping
-    public ResponseEntity<List<ChatResponse>> chat(Principal principal) {
+    public ResponseEntity<List<ChatResponse>> chat(@RequestParam(name = "lrid", required = false) final Integer lastReadId,
+                                                   final Principal principal) {
 
-        final String loggedUsername = principal.getName();
+        MultiValueMap<String, String> headers = new HttpHeaders();
 
-        Sort sort = Sort.by(Sort.Direction.DESC, "id");
-        List<ChatResponse> messages = chatMessageRepository
-                .findAll(PageRequest.of(0, 20, sort))
-                .stream()
-                .map(m -> new ChatResponse(loggedUsername.equals(m.getSender()), m.getBody()))
+        List<ChatMessage> messages = getMessageChunkService.execute(lastReadId);
+
+        if (!messages.isEmpty()) {
+            headers.put("lrid", List.of(messages.getFirst().getId().toString()));
+        }
+
+        List<ChatResponse> response = messages.stream()
+                .map(cm -> createChatResponse(cm, principal))
                 .collect(Collectors.toList());
 
-        Collections.reverse(messages);
+        return new ResponseEntity<>(response, headers, 200);
+    }
 
-        return ResponseEntity.ok(messages);
+    private ChatResponse createChatResponse(ChatMessage message, Principal principal) {
+        boolean me = message.getSender().equals(principal.getName());
+        return new ChatResponse(message.getId(), me, message.getBody());
     }
 }
