@@ -109,6 +109,19 @@
 
     client.activate();
 
+    sendMessageInput.focus()
+
+    document.addEventListener("keydown", function(event) {
+        const keyName = event.key
+        if (!document.activeElement.isSameNode(sendMessageInput)) {
+            return
+        }
+        if (keyName !== "Enter") {
+            return
+        }
+        publishMessage()
+    })
+
     sendBtn.addEventListener("click", handleSendMessage)
 
     function handleChatSubscription(message) {
@@ -131,6 +144,10 @@
     }
 
     function handleSendMessage(event) {
+        publishMessage()
+    }
+
+    function publishMessage() {
         const request = new MessageRequest(sendMessageInput.value)
         const body = JSON.stringify(request);
         client.publish({
